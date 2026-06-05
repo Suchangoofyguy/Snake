@@ -27,20 +27,30 @@
     <select id="gridSize"><option value="7">Map: 7x7</option><option value="10" selected>Map: 10x10</option><option value="20">Map: 20x20</option></select>
     <select id="shapeSelect"><option value="round">Shape: Rounded</option><option value="square">Shape: Square</option></select>
     <select id="speedSelect"><option value="0.12">Turtle [Glitched style]</option><option value="0.10" selected>Speed: Snake</option><option value="0.17">Speed: Bunny</option></select>
-    
-    <!-- NEW APPLE COUNT DROPDOWN -->
     <select id="appleCountSelect">
         <option value="1" selected>Apples: 1</option>
         <option value="2">Apples: 2</option>
         <option value="3">Apples: 3</option>
-        <option value="4">Apples: 4</option>
         <option value="5">Apples: 5</option>
-        <option value="6">Apples: 6</option>
-        <option value="7">Apples: 7</option>
-        <option value="8">Apples: 8</option>
-        <option value="9">Apples: 9</option>
         <option value="10">Apples: 10</option>
     </select>
+    
+    <!-- NEW FRUIT SELECTOR DROPDOWN -->
+    <select id="fruitSelect">
+        <option value="🍎" selected>Fruit: Apple 🍎</option>
+        <option value="🍌">Fruit: Banana 🍌</option>
+        <option value="🍒">Fruit: Cherry 🍒</option>
+        <option value="🍉">Fruit: Watermelon 🍉</option>
+    </select>
+    
+    <!-- NEW SNAKE COLOR SELECTOR DROPDOWN -->
+    <select id="colorSelect">
+        <option value="#2a7fff" selected>Color: Classic Blue 🔵</option>
+        <option value="#39ff14">Color: Neon Green 🟢</option>
+        <option value="#ff007f">Color: Hot Pink 🔴</option>
+        <option value="#ffea00">Color: Laser Yellow 🟡</option>
+    </select>
+    
     <button onclick="backToMenu()">Back</button>
 </div>
 
@@ -55,7 +65,7 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-let gridSize, snake, dir, nextDir, apples, pos, speed, running, maxApples;
+let gridSize, snake, dir, nextDir, apples, pos, speed, running, maxApples, fruitType, snakeColor;
 
 function showSettings() { document.getElementById('mainMenu').style.display='none'; document.getElementById('settings').style.display='block'; }
 function backToMenu() { document.getElementById('settings').style.display='none'; document.getElementById('gameOver').style.display='none'; document.getElementById('mainMenu').style.display='block'; }
@@ -64,6 +74,8 @@ function startGame() {
     gridSize = parseInt(document.getElementById("gridSize").value);
     speed = parseFloat(document.getElementById("speedSelect").value);
     maxApples = parseInt(document.getElementById("appleCountSelect").value);
+    fruitType = document.getElementById("fruitSelect").value;
+    snakeColor = document.getElementById("colorSelect").value;
     
     document.getElementById('mainMenu').style.display = "none";
     document.getElementById('settings').style.display = "none";
@@ -75,7 +87,6 @@ function startGame() {
     pos = {x: 0, y: 0}; 
     running = true;
     
-    // Spawn your choice of multiple apples
     apples = [];
     for(let i = 0; i < maxApples; i++) {
         spawnApple();
@@ -109,7 +120,6 @@ function render() {
         }
         snake.unshift(head);
         
-        // Let snake eat from the multiple apples array list
         let appleIndex = apples.findIndex(a => head.x === a.x && head.y === a.y);
         if (appleIndex !== -1) {
             apples.splice(appleIndex, 1); 
@@ -127,15 +137,16 @@ function draw() {
     let shape = document.getElementById("shapeSelect").value;
     ctx.fillStyle = "#0f240f"; ctx.fillRect(0, 0, 400, 400);
     
-    // Draw all active apples
-    ctx.fillStyle = "red"; 
+    // RENDER THE SELECTED FRUIT EMOJI PERFECTLY
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `${ts * 0.7}px sans-serif`;
     apples.forEach(apple => {
-        ctx.beginPath(); 
-        ctx.arc(apple.x*ts+ts/2, apple.y*ts+ts/2, ts/3, 0, Math.PI*2); 
-        ctx.fill();
+        ctx.fillText(fruitType, apple.x * ts + ts / 2, apple.y * ts + ts / 2);
     });
 
-    ctx.strokeStyle = "#2a7fff";
+    // DYNAMIC SNAKE BODY COLOR
+    ctx.strokeStyle = snakeColor;
     ctx.lineWidth = ts * 0.8;
     ctx.lineJoin = shape === "round" ? "round" : "miter";
     ctx.lineCap = shape === "round" ? "round" : "square";
