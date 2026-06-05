@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="google-site-verification" content="google3bf9b5c3f8b0babf.html" />
 <title>Snake</title>
 <style>
     body { margin: 0; background: #0c1a0c; color: white; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; overflow: hidden; touch-action: none; }
@@ -26,6 +27,20 @@
     <select id="gridSize"><option value="7">Map: 7x7</option><option value="10" selected>Map: 10x10</option><option value="20">Map: 20x20</option></select>
     <select id="shapeSelect"><option value="round">Shape: Rounded</option><option value="square">Shape: Square</option></select>
     <select id="speedSelect"><option value="0.12">Turtle [Glitched style]</option><option value="0.10" selected>Speed: Snake</option><option value="0.17">Speed: Bunny</option></select>
+    
+    <!-- NEW APPLE COUNT DROPDOWN -->
+    <select id="appleCountSelect">
+        <option value="1" selected>Apples: 1</option>
+        <option value="2">Apples: 2</option>
+        <option value="3">Apples: 3</option>
+        <option value="4">Apples: 4</option>
+        <option value="5">Apples: 5</option>
+        <option value="6">Apples: 6</option>
+        <option value="7">Apples: 7</option>
+        <option value="8">Apples: 8</option>
+        <option value="9">Apples: 9</option>
+        <option value="10">Apples: 10</option>
+    </select>
     <button onclick="backToMenu()">Back</button>
 </div>
 
@@ -40,7 +55,7 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-let gridSize, snake, dir, nextDir, apple, pos, speed, running;
+let gridSize, snake, dir, nextDir, apples, pos, speed, running, maxApples;
 
 function showSettings() { document.getElementById('mainMenu').style.display='none'; document.getElementById('settings').style.display='block'; }
 function backToMenu() { document.getElementById('settings').style.display='none'; document.getElementById('gameOver').style.display='none'; document.getElementById('mainMenu').style.display='block'; }
@@ -48,6 +63,8 @@ function backToMenu() { document.getElementById('settings').style.display='none'
 function startGame() {
     gridSize = parseInt(document.getElementById("gridSize").value);
     speed = parseFloat(document.getElementById("speedSelect").value);
+    maxApples = parseInt(document.getElementById("appleCountSelect").value);
+    
     document.getElementById('mainMenu').style.display = "none";
     document.getElementById('settings').style.display = "none";
     document.getElementById('gameOver').style.display = "none";
@@ -57,12 +74,25 @@ function startGame() {
     dir = {x: 1, y: 0}; nextDir = {x: 1, y: 0};
     pos = {x: 0, y: 0}; 
     running = true;
-    spawnApple();
+    
+    // Spawn your choice of multiple apples
+    apples = [];
+    for(let i = 0; i < maxApples; i++) {
+        spawnApple();
+    }
+    
     requestAnimationFrame(render);
 }
 
 function spawnApple() {
-    apple = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+    let newApple;
+    let attempts = 0;
+    do {
+        newApple = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+        attempts++;
+    } while ((snake.some(s => s.x === newApple.x && s.y === newApple.y) || apples.some(a => a.x === newApple.x && a.y === newApple.y)) && attempts < 100);
+    
+    apples.push(newApple);
 }
 
 function render() {
@@ -78,7 +108,15 @@ function render() {
             running = false; canvas.style.display = "none"; document.getElementById('gameOver').style.display = "block"; return;
         }
         snake.unshift(head);
-        if (head.x === apple.x && head.y === apple.y) spawnApple(); else snake.pop();
+        
+        // Let snake eat from the multiple apples array list
+        let appleIndex = apples.findIndex(a => head.x === a.x && head.y === a.y);
+        if (appleIndex !== -1) {
+            apples.splice(appleIndex, 1); 
+            spawnApple();                 
+        } else {
+            snake.pop();
+        }
     }
     draw();
     requestAnimationFrame(render);
@@ -88,7 +126,14 @@ function draw() {
     let ts = 400 / gridSize;
     let shape = document.getElementById("shapeSelect").value;
     ctx.fillStyle = "#0f240f"; ctx.fillRect(0, 0, 400, 400);
-    ctx.fillStyle = "red"; ctx.beginPath(); ctx.arc(apple.x*ts+ts/2, apple.y*ts+ts/2, ts/3, 0, Math.PI*2); ctx.fill();
+    
+    // Draw all active apples
+    ctx.fillStyle = "red"; 
+    apples.forEach(apple => {
+        ctx.beginPath(); 
+        ctx.arc(apple.x*ts+ts/2, apple.y*ts+ts/2, ts/3, 0, Math.PI*2); 
+        ctx.fill();
+    });
 
     ctx.strokeStyle = "#2a7fff";
     ctx.lineWidth = ts * 0.8;
@@ -120,28 +165,25 @@ let touchStartX = 0;
 let touchStartY = 0;
 
 window.addEventListener("touchstart", e => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches.clientX;
+    touchStartY = e.touches.clientY;
 }, { passive: true });
 
 window.addEventListener("touchend", e => {
     if (!running) return;
-    let touchEndX = e.changedTouches[0].clientX;
-    let touchEndY = e.changedTouches[0].clientY;
+    let touchEndX = e.changedTouches.clientX;
+    let touchEndY = e.changedTouches.clientY;
     
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
     
-    // Check if the gesture was long enough to count as a swipe
     if (Math.max(Math.abs(diffX), Math.abs(diffY)) > 30) {
         if (Math.abs(diffX) > Math.abs(diffY)) {
-            // Horizontal Swipes
-            if (diffX > 0 && dir.x === 0) nextDir = {x: 1, y: 0};      // Swipe Right
-            else if (diffX < 0 && dir.x === 0) nextDir = {x: -1, y: 0}; // Swipe Left
+            if (diffX > 0 && dir.x === 0) nextDir = {x: 1, y: 0};      
+            else if (diffX < 0 && dir.x === 0) nextDir = {x: -1, y: 0}; 
         } else {
-            // Vertical Swipes
-            if (diffY > 0 && dir.y === 0) nextDir = {x: 0, y: 1};       // Swipe Down
-            else if (diffY < 0 && dir.y === 0) nextDir = {x: 0, y: -1};  // Swipe Up
+            if (diffY > 0 && dir.y === 0) nextDir = {x: 0, y: 1};       
+            else if (diffY < 0 && dir.y === 0) nextDir = {x: 0, y: -1};  
         }
     }
 }, { passive: true });
