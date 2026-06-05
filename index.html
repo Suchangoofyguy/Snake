@@ -34,21 +34,23 @@
         <option value="5">Apples: 5</option>
         <option value="10">Apples: 10</option>
     </select>
-    
-    <!-- NEW FRUIT SELECTOR DROPDOWN -->
     <select id="fruitSelect">
         <option value="🍎" selected>Fruit: Apple 🍎</option>
         <option value="🍌">Fruit: Banana 🍌</option>
         <option value="🍒">Fruit: Cherry 🍒</option>
         <option value="🍉">Fruit: Watermelon 🍉</option>
     </select>
-    
-    <!-- NEW SNAKE COLOR SELECTOR DROPDOWN -->
     <select id="colorSelect">
         <option value="#2a7fff" selected>Color: Classic Blue 🔵</option>
         <option value="#39ff14">Color: Neon Green 🟢</option>
         <option value="#ff007f">Color: Hot Pink 🔴</option>
         <option value="#ffea00">Color: Laser Yellow 🟡</option>
+    </select>
+    
+    <!-- NEW NOCLIP MODE DROPDOWN -->
+    <select id="noclipSelect">
+        <option value="off" selected>Noclip: Off (Classic) 🚫</option>
+        <option value="on">Noclip: On (God Mode) 👻</option>
     </select>
     
     <button onclick="backToMenu()">Back</button>
@@ -65,7 +67,7 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-let gridSize, snake, dir, nextDir, apples, pos, speed, running, maxApples, fruitType, snakeColor;
+let gridSize, snake, dir, nextDir, apples, pos, speed, running, maxApples, fruitType, snakeColor, noclipMode;
 
 function showSettings() { document.getElementById('mainMenu').style.display='none'; document.getElementById('settings').style.display='block'; }
 function backToMenu() { document.getElementById('settings').style.display='none'; document.getElementById('gameOver').style.display='none'; document.getElementById('mainMenu').style.display='block'; }
@@ -76,6 +78,7 @@ function startGame() {
     maxApples = parseInt(document.getElementById("appleCountSelect").value);
     fruitType = document.getElementById("fruitSelect").value;
     snakeColor = document.getElementById("colorSelect").value;
+    noclipMode = document.getElementById("noclipSelect").value;
     
     document.getElementById('mainMenu').style.display = "none";
     document.getElementById('settings').style.display = "none";
@@ -115,9 +118,25 @@ function render() {
     if (Math.abs(pos.x - snake[0].x) < 0.1 && Math.abs(pos.y - snake[0].y) < 0.1) {
         let head = { x: snake[0].x + nextDir.x, y: snake[0].y + nextDir.y };
         dir = nextDir;
-        if (head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize || snake.some(s => s.x === head.x && s.y === head.y)) {
-            running = false; canvas.style.display = "none"; document.getElementById('gameOver').style.display = "block"; return;
+        
+        // NOCLIP WALL RE-ROUTING LOGIC
+        if (noclipMode === "on") {
+            if (head.x < 0) head.x = gridSize - 1;
+            if (head.x >= gridSize) head.x = 0;
+            if (head.y < 0) head.y = gridSize - 1;
+            if (head.y >= gridSize) head.y = 0;
+        } else {
+            // Classic Wall Crash Conditions
+            if (head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize) {
+                endGame(); return;
+            }
         }
+        
+        // BODY COLLISION CHECK (Only crashes if Noclip is OFF)
+        if (noclipMode === "off" && snake.some(s => s.x === head.x && s.y === head.y)) {
+            endGame(); return;
+        }
+        
         snake.unshift(head);
         
         let appleIndex = apples.findIndex(a => head.x === a.x && head.y === a.y);
@@ -132,12 +151,17 @@ function render() {
     requestAnimationFrame(render);
 }
 
+function endGame() {
+    running = false; 
+    canvas.style.display = "none"; 
+    document.getElementById('gameOver').style.display = "block";
+}
+
 function draw() {
     let ts = 400 / gridSize;
     let shape = document.getElementById("shapeSelect").value;
     ctx.fillStyle = "#0f240f"; ctx.fillRect(0, 0, 400, 400);
     
-    // RENDER THE SELECTED FRUIT EMOJI PERFECTLY
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = `${ts * 0.7}px sans-serif`;
@@ -145,7 +169,6 @@ function draw() {
         ctx.fillText(fruitType, apple.x * ts + ts / 2, apple.y * ts + ts / 2);
     });
 
-    // DYNAMIC SNAKE BODY COLOR
     ctx.strokeStyle = snakeColor;
     ctx.lineWidth = ts * 0.8;
     ctx.lineJoin = shape === "round" ? "round" : "miter";
