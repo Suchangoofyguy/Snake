@@ -8,6 +8,9 @@
 <style>
     body { margin: 0; background: #0c1a0c; color: white; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; overflow: hidden; touch-action: none; }
     .panel { background: rgba(0,0,0,0.9); padding: 25px; border-radius: 12px; text-align: center; border: 2px solid #444; width: 220px; position: absolute; z-index: 10; }
+    .top-bar { display: none; width: 400px; max-width: 90vw; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; font-size: 18px; font-family: monospace; z-index: 5; }
+    .reset-btn { background: #ff3b30; color: white; border: none; border-radius: 4px; padding: 5px 12px; cursor: pointer; font-weight: bold; font-size: 14px; }
+    .reset-btn:hover { background: #d32f2f; }
     canvas { border: 4px solid #333; background: #0f240f; display: none; max-width: 90vw; max-height: 90vw; }
     button { display: block; width: 100%; padding: 10px; margin: 8px 0; cursor: pointer; background: #2a7fff; color: white; border: none; border-radius: 4px; font-weight: bold; }
     button:hover { background: #1a60dd; }
@@ -15,6 +18,11 @@
 </style>
 </head>
 <body>
+
+<div id="gameHUD" class="top-bar">
+    <div id="scoreDisplay">Score: 0 🍎</div>
+    <button class="reset-btn" onclick="location.reload()">✕ Reset</button>
+</div>
 
 <div id="mainMenu" class="panel">
     <h1>Snake</h1>
@@ -46,18 +54,16 @@
         <option value="#ff007f">Color: Hot Pink 🔴</option>
         <option value="#ffea00">Color: Laser Yellow 🟡</option>
     </select>
-    
-    <!-- NEW NOCLIP MODE DROPDOWN -->
     <select id="noclipSelect">
         <option value="off" selected>Noclip: Off (Classic) 🚫</option>
         <option value="on">Noclip: On (God Mode) 👻</option>
     </select>
-    
     <button onclick="backToMenu()">Back</button>
 </div>
 
 <div id="gameOver" class="panel" style="display:none;">
     <h3>Game Over</h3>
+    <h4 id="finalScoreDisplay">Score: 0</h4>
     <button onclick="startGame()">Retry</button>
     <button onclick="backToMenu()">Main Menu</button>
 </div>
@@ -67,7 +73,7 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-let gridSize, snake, dir, nextDir, apples, pos, speed, running, maxApples, fruitType, snakeColor, noclipMode;
+let gridSize, snake, dir, nextDir, apples, pos, speed, running, maxApples, fruitType, snakeColor, noclipMode, score;
 
 function showSettings() { document.getElementById('mainMenu').style.display='none'; document.getElementById('settings').style.display='block'; }
 function backToMenu() { document.getElementById('settings').style.display='none'; document.getElementById('gameOver').style.display='none'; document.getElementById('mainMenu').style.display='block'; }
@@ -80,9 +86,14 @@ function startGame() {
     snakeColor = document.getElementById("colorSelect").value;
     noclipMode = document.getElementById("noclipSelect").value;
     
+    score = 0;
+    updateScoreUI();
+
     document.getElementById('mainMenu').style.display = "none";
     document.getElementById('settings').style.display = "none";
     document.getElementById('gameOver').style.display = "none";
+    
+    document.getElementById('gameHUD').style.display = "flex";
     canvas.style.display = "block";
     
     snake = [{x: 2, y: 0}, {x: 1, y: 0}, {x: 0, y: 0}];
@@ -109,6 +120,10 @@ function spawnApple() {
     apples.push(newApple);
 }
 
+function updateScoreUI() {
+    document.getElementById('scoreDisplay').innerText = `Score: ${score} ${fruitType}`;
+}
+
 function render() {
     if (!running) return;
     
@@ -119,20 +134,17 @@ function render() {
         let head = { x: snake[0].x + nextDir.x, y: snake[0].y + nextDir.y };
         dir = nextDir;
         
-        // NOCLIP WALL RE-ROUTING LOGIC
         if (noclipMode === "on") {
             if (head.x < 0) head.x = gridSize - 1;
             if (head.x >= gridSize) head.x = 0;
             if (head.y < 0) head.y = gridSize - 1;
             if (head.y >= gridSize) head.y = 0;
         } else {
-            // Classic Wall Crash Conditions
             if (head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize) {
                 endGame(); return;
             }
         }
         
-        // BODY COLLISION CHECK (Only crashes if Noclip is OFF)
         if (noclipMode === "off" && snake.some(s => s.x === head.x && s.y === head.y)) {
             endGame(); return;
         }
@@ -142,6 +154,8 @@ function render() {
         let appleIndex = apples.findIndex(a => head.x === a.x && head.y === a.y);
         if (appleIndex !== -1) {
             apples.splice(appleIndex, 1); 
+            score++;
+            updateScoreUI();
             spawnApple();                 
         } else {
             snake.pop();
@@ -154,6 +168,8 @@ function render() {
 function endGame() {
     running = false; 
     canvas.style.display = "none"; 
+    document.getElementById('gameHUD').style.display = "none";
+    document.getElementById('finalScoreDisplay').innerText = `Final Score: ${score} ${fruitType}`;
     document.getElementById('gameOver').style.display = "block";
 }
 
@@ -194,19 +210,18 @@ window.addEventListener("keydown", e => {
     else if((k==="arrowright"||k==="d") && dir.x===0) nextDir = {x: 1, y: 0};
 });
 
-// MOBILE SWIPE GESTURES
 let touchStartX = 0;
 let touchStartY = 0;
 
 window.addEventListener("touchstart", e => {
-    touchStartX = e.touches.clientX;
-    touchStartY = e.touches.clientY;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
 }, { passive: true });
 
 window.addEventListener("touchend", e => {
     if (!running) return;
-    let touchEndX = e.changedTouches.clientX;
-    let touchEndY = e.changedTouches.clientY;
+    let touchEndX = e.changedTouches[0].clientX;
+    let touchEndY = e.changedTouches[0].clientY;
     
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
